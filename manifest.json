@@ -8,6 +8,11 @@
     },
     "background": {
       "service_worker": "background.js"
-    }
-  }
-  
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://www.navaar.ir/*"],
+            "js": ["content.js"]
+        }
+    ]
+}

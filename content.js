@@ -19,69 +19,74 @@ if (targetElement) {
 
 // Add event listener to the button
 button.addEventListener('click', async () => {
-    chrome.tabs.query({
-        active: true,
-        currentWindow: true
-    }, async (tabs) => {
-        const url = tabs[0].url;
-        const match = url.match(/https:\/\/www\.navaar\.ir\/audiobook\/(\d{4,10})\/.*/);
+    if (typeof chrome !== 'undefined' && chrome.tabs) {
 
-        if (match) {
-            const audioBookId = match[1];
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, async (tabs) => {
+            const url = tabs[0].url;
+            const match = url.match(/https:\/\/www\.navaar\.ir\/audiobook\/(\d{4,10})\/.*/);
 
-            // Fetch the audiobook page to extract description and image
-            const response = await fetch(url);
-            const pageContent = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(pageContent, 'text/html');
+            if (match) {
+                const audioBookId = match[1];
 
-            // Extract description
-            const description = doc.evaluate(
-                '/html/body/div[1]/div[2]/div/div/section[2]/div/div/div[2]/div[1]/p/span',
-                doc,
-                null,
-                XPathResult.STRING_TYPE,
-                null
-            ).stringValue;
+                // Fetch the audiobook page to extract description and image
+                const response = await fetch(url);
+                const pageContent = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(pageContent, 'text/html');
 
-            // Extract image URL and title
-            const imageElement = doc.evaluate(
-                '/html/body/div[1]/div[2]/div/div/section[2]/div/div/div[1]/div[1]/figure/a/img',
-                doc,
-                null,
-                XPathResult.FIRST_ORDERED_NODE_TYPE,
-                null
-            ).singleNodeValue;
+                // Extract description
+                const description = doc.evaluate(
+                    '/html/body/div[1]/div[2]/div/div/section[2]/div/div/div[2]/div[1]/p/span',
+                    doc,
+                    null,
+                    XPathResult.STRING_TYPE,
+                    null
+                ).stringValue;
 
-            const imageUrl = imageElement ? imageElement.getAttribute('src') : '';
-            const title = imageElement ? imageElement.getAttribute('alt') : '';
+                // Extract image URL and title
+                const imageElement = doc.evaluate(
+                    '/html/body/div[1]/div[2]/div/div/section[2]/div/div/div[1]/div[1]/figure/a/img',
+                    doc,
+                    null,
+                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+                    null
+                ).singleNodeValue;
 
-            // Prepare data for POST request
-            const postData = {
-                origin: 'navaar.ir',
-                media_id: audioBookId,
-                image: imageUrl,
-                link: `https://www.navaar.ir/audiobook/${audioBookId}`,
-                title: title,
-                description: description
-            };
+                const imageUrl = imageElement ? imageElement.getAttribute('src') : '';
+                const title = imageElement ? imageElement.getAttribute('alt') : '';
 
-            // Send POST request
-            const postResponse = await fetch('http://localhost:8000/api/rss-generator', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(postData)
-            });
+                // Prepare data for POST request
+                const postData = {
+                    origin: 'navaar.ir',
+                    media_id: audioBookId,
+                    image: imageUrl,
+                    link: `https://www.navaar.ir/audiobook/${audioBookId}`,
+                    title: title,
+                    description: description
+                };
 
-            if (postResponse.ok) {
-                alert('Data sent successfully!');
+                // Send POST request
+                const postResponse = await fetch('http://localhost:8000/api/rss-generator', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(postData)
+                });
+
+                if (postResponse.ok) {
+                    alert('Data sent successfully!');
+                } else {
+                    console.error('POST request failed:', postResponse.statusText);
+                }
             } else {
-                console.error('POST request failed:', postResponse.statusText);
+                alert('This feature only works on navaar.ir');
             }
-        } else {
-            alert('This feature only works on navaar.ir');
-        }
-    });
+        });
+    } else {
+        console.error('Chrome API is not available.');
+    }
 });
